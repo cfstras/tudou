@@ -31,6 +31,11 @@ Example:
 
 Loads the video IDs of userID 12345678 and save as `12345678.json` and `12345678.tsv`.
 
+### tudou-scrape
+
+Sends Video IDs to SQS.
+
+    tudou-scrape -send -json bla.json -queue huxlipux -region us-east-1
 
 ## libs
 

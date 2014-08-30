@@ -1,11 +1,8 @@
 package main
 
 import (
-	"encoding/csv"
-	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -40,7 +37,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	var list []data.Item
+	var list data.ItemSlice
 	var err error
 	var filebaseName string
 	if listId != 0 {
@@ -65,12 +62,7 @@ func main() {
 		}
 	} else if jsonSrc != "" {
 		filebaseName = strings.TrimSuffix(jsonSrc, ".json")
-		b, err := ioutil.ReadFile(jsonSrc)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(ErrorFile)
-		}
-		err = json.Unmarshal(b, &list)
+		err = list.LoadJSON(jsonSrc)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(ErrorJSON)
@@ -80,39 +72,24 @@ func main() {
 	}
 	fmt.Println("Got", len(list), "items")
 	fmt.Println("Sorting...")
-	data.ItemSlice(list).Sort()
+	list.Sort()
 
 	if filebaseName != "" {
 		name := filebaseName + ".json"
 		fmt.Println("Saving json to", name)
-		b, err := json.MarshalIndent(&list, "", "  ")
+		err = list.WriteJSON(name)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(ErrorJSON)
-		}
-		err = ioutil.WriteFile(name, b, 0664)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(ErrorFile)
 		}
 	}
 
 	if saveTsv {
 		name := filebaseName + ".tsv"
 		fmt.Println("saving tsv to", name)
-		file, err := os.Create(name)
+		err = list.WriteTSV(name)
 		if err != nil {
 			fmt.Println(err)
-			os.Exit(ErrorFile)
-		}
-		w := csv.NewWriter(file)
-		w.Comma = '\t'
-		for _, item := range list {
-			w.Write([]string{item.Code, item.Title})
-		}
-		w.Flush()
-		if w.Error() != nil {
-			fmt.Println(w.Error())
 			os.Exit(ErrorTSV)
 		}
 	}
