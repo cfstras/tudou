@@ -25,6 +25,7 @@ const (
 	ErrorQueue
 	ErrorS3
 	ErrorDownload
+	ErrorExists
 )
 
 var stuff struct {
@@ -172,7 +173,26 @@ func receive() {
 	}
 	videoId, videoTitle := split[0], split[1]
 
-	//TODO check if file exists already
+	// check if file exists already
+	if res, err := bucket.List(videoId, "", "", 20); err != nil {
+		Err("Error checking S3 for video:", err, ErrorS3)
+	} else if len(res.Contents) > 0 {
+		gotOne, gotSize, gotKey := false, int64(0), ""
+		for _, k := range res.Contents {
+			if k.Size > 512*1024 { // 512k min
+				gotOne, gotSize, gotKey = true, k.Size, k.Key
+				break
+			}
+		}
+		if gotOne {
+			_, err = stuff.queue.DeleteMessage(msg)
+			if err != nil {
+				Err("Error in DeleteMessage:", err, ErrorQueue)
+			}
+			Err(fmt.Sprint("File already there, size ", gotSize, ", key ",
+				gotKey), nil, ErrorExists)
+		}
+	}
 
 	url := dl.TudouUrl + videoId
 	Yellow("Loading ")
