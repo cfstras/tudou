@@ -1,21 +1,24 @@
 #!/bin/bash
 
-BASEPATH=bitbucket.org/cfstras/tudou
-
 FOLDERS=$(find . -type d | cut -c3-)
 CMDS=$(ls cmd)
 
 function build() {
-	echo "# $BASEPATH/cmd/$1"
-	go get -d $BASEPATH/cmd/$1
-	go build -v -o bin/$1 $BASEPATH/cmd/$1
+	echo "# ./cmd/$1"
+	go get -d -v -t ./cmd/$1
+	go build -v -o bin/$1 ./cmd/$1
 }
 
 case "$1" in
 	"")
 	for i in $CMDS; do
-		echo "# $i"
 		build $i
+	done
+	;;
+	update)
+	for i in $CMDS; do
+		echo "# $i"
+		go get -d -u -v -t ./cmd/$i
 	done
 	;;
 	run)
@@ -40,4 +43,16 @@ case "$1" in
 			go fix "$f"; \
 			go tool vet -composites=false "$f"; \
 		done
+	;;
+	help)
+	cat <<EOF
+ultimate go build cmd, v2
+usage:
+	./b 		get deps & build all packages in cmd/ to bin/
+	./b update	update deps for all packages in cmd/
+	./b run <x>	build & run cmd x
+	./b clean	clean bin
+	./b fix		run goimports, go fix and vet on cmd/
+EOF
+	;;
 esac
