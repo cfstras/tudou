@@ -29,11 +29,11 @@ const (
 )
 
 var stuff struct {
-	regionName            string
-	queueName, bucketName string
-	region                aws.Region
-	sqs                   *sqs.SQS
-	auth                  aws.Auth
+	queueRegionName, bucketRegionName string
+	queueName, bucketName             string
+	queueRegion, bucketRegion         aws.Region
+	sqs                               *sqs.SQS
+	auth                              aws.Auth
 
 	items data.ItemSlice
 	queue *sqs.Queue
@@ -73,7 +73,8 @@ func main() {
 
 	flag.StringVar(&stuff.queueName, "queue", "", "SQS Queue Name")
 	flag.StringVar(&stuff.bucketName, "bucket", "", "S3 Bucket Name (only for receive)")
-	flag.StringVar(&stuff.regionName, "region", "us-east-1", "AWS Region")
+	flag.StringVar(&stuff.queueRegionName, "queueRegion", "us-east-1", "AWS region for queue")
+	flag.StringVar(&stuff.bucketRegionName, "bucketRegion", "us-west-2", "AWS region for bucket")
 
 	flag.Parse()
 	if help {
@@ -118,17 +119,8 @@ func main() {
 		}
 	}
 
-	var ok bool
-	stuff.region, ok = aws.Regions[stuff.regionName]
-	if !ok {
-		Redln("Region", stuff.regionName, "not supported. Available are:")
-		for k := range aws.Regions {
-			fmt.Print(k, ", ")
-		}
-		Redln()
-		os.Exit(ErrorArgs)
-	}
-	stuff.sqs = sqs.New(stuff.auth, stuff.region)
+	stuff.queueRegion = getRegion(stuff.queueRegionName)
+	stuff.sqs = sqs.New(stuff.auth, stuff.queueRegion)
 
 	stuff.queue, err = stuff.sqs.GetQueue(stuff.queueName)
 	if err != nil {
@@ -156,7 +148,8 @@ func main() {
 }
 
 func receive() {
-	s3client := s3.New(stuff.auth, stuff.region)
+	stuff.bucketRegion = getRegion(stuff.bucketRegionName)
+	s3client := s3.New(stuff.auth, stuff.bucketRegion)
 	/* I haz a */ bucket := s3client.Bucket(stuff.bucketName)
 
 	msgs, err := stuff.queue.ReceiveMessage(1)
@@ -253,4 +246,18 @@ func send() {
 func Err(msg string, err error, exitCode int) {
 	Redln(msg, err)
 	os.Exit(exitCode)
+}
+
+func getRegion(name string) (r aws.Region) {
+	var ok bool
+	r, ok = aws.Regions[name]
+	if !ok {
+		Redln("Region", name, "not supported. Available are:")
+		for k := range aws.Regions {
+			fmt.Print(k, ", ")
+		}
+		Redln()
+		os.Exit(ErrorArgs)
+	}
+	return
 }
