@@ -50,7 +50,7 @@ func Load(url string) (file *os.File, length int64, info Info, infoBytes []byte,
 	if err != nil {
 		return
 	}
-	var filename string
+	filename := "-.info.json"
 	for { // pipe output
 		var line string
 		line, err = bio.ReadString('\n')
@@ -65,11 +65,6 @@ func Load(url string) (file *os.File, length int64, info Info, infoBytes []byte,
 			}
 		}
 		fmt.Println(line)
-		if strings.Contains(line, "metadata as JSON to:") {
-			filename = strings.TrimPrefix(line,
-				"[info] Video description metadata as JSON to: ")
-			fmt.Println("JSON Metadata from:", filename)
-		}
 	}
 	if filename == "" {
 		err = errors.New("No Metadata given.")
