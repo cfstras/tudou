@@ -32,7 +32,7 @@ const TudouUrl = "http://tudou.com/programs/view/"
 
 func Load(url string) (file *os.File, length int64, info Info, infoBytes []byte,
 	err error) {
-	cmd := exec.Command("youtube-dl", "-o", "-", "--write-info-json", url)
+	cmd := exec.Command("youtube-dl", "--verbose", "-o", "-", "--write-info-json", url)
 	var stderr io.ReadCloser
 	stderr, err = cmd.StderrPipe()
 	if err != nil {
