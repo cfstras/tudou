@@ -3,7 +3,6 @@ package youtube_dl
 import (
 	"bufio"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -32,54 +31,65 @@ const TudouUrl = "http://tudou.com/programs/view/"
 
 func Load(url string) (file *os.File, length int64, info Info, infoBytes []byte,
 	err error) {
-	cmd := exec.Command("youtube-dl", "--verbose", "-o", "-", "--write-info-json", url)
-	var stderr io.ReadCloser
-	stderr, err = cmd.StderrPipe()
-	if err != nil {
-		return
-	}
-	bio := bufio.NewReader(stderr)
-
 	file, err = ioutil.TempFile(".", "tudou-scraper-ytdl-")
 	if err != nil {
 		return
 	}
-	cmd.Stdout = file
+	err = file.Close()
+	if err != nil {
+		return
+	}
+	err = os.Remove(file.Name())
+	if err != nil {
+		return
+	}
+
+	cmd := exec.Command("youtube-dl", "--verbose", "-o", file.Name(), "--write-info-json", url)
+
+	pipe := func(r io.ReadCloser) {
+		buf := bufio.NewReader(r)
+		for {
+			line, err := buf.ReadString('\n')
+			line = strings.TrimRight(line, "\r\n")
+			if err != nil && err == io.EOF {
+				r.Close()
+				return
+			} else if err != nil {
+				fmt.Println("Error reading from stderr:", err)
+				return
+			}
+			fmt.Println(line)
+		}
+	}
+	var stdout, stderr io.ReadCloser
+	stdout, err = cmd.StdoutPipe()
+	if err != nil {
+		return
+	}
+	stderr, err = cmd.StderrPipe()
+	if err != nil {
+		return
+	}
+	go pipe(stdout)
+	go pipe(stderr)
 
 	err = cmd.Start()
 	if err != nil {
 		return
 	}
-	filename := "-.info.json"
-	for { // pipe output
-		var line string
-		line, err = bio.ReadString('\n')
-		line = strings.TrimRight(line, "\r\n")
-		if err != nil {
-			if err != io.EOF {
-				fmt.Println("Error reading from stderr:", err)
-				return
-			} else {
-				err = nil
-				break
-			}
-		}
-		fmt.Println(line)
-	}
-	if filename == "" {
-		err = errors.New("No Metadata given.")
-	}
+	infoFilename := file.Name() + ".info.json"
+
 	err = cmd.Wait()
 	if err != nil {
 		return
 	}
 
-	infoBytes, err = ioutil.ReadFile(filename)
+	infoBytes, err = ioutil.ReadFile(infoFilename)
 	if err != nil {
 		cmd.Process.Signal(syscall.SIGTERM)
 		return
 	}
-	err = os.Remove(filename)
+	err = os.Remove(infoFilename)
 	if err != nil {
 		cmd.Process.Signal(syscall.SIGTERM)
 		return
@@ -90,6 +100,10 @@ func Load(url string) (file *os.File, length int64, info Info, infoBytes []byte,
 		return
 	}
 
+	file, err = os.Open(file.Name())
+	if err != nil {
+		return
+	}
 	length, err = file.Seek(0, 2) // seek to end
 	if err != nil {
 		return

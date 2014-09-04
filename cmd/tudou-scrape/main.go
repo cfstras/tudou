@@ -26,6 +26,7 @@ const (
 	ErrorS3
 	ErrorDownload
 	ErrorExists
+	ErrorFile
 )
 
 var stuff struct {
@@ -215,13 +216,13 @@ func receive() {
 		Err("Error PUTting video:", err, ErrorS3)
 	}
 	Yellowln("Removing tempfiles...")
-	err = os.Remove(file.Name())
-	if err != nil {
-		Err("Error deleting file:", err, ErrorS3)
-	}
 	err = file.Close()
 	if err != nil {
-		Err("Error closing file:", err, ErrorS3)
+		Err("Error closing file:", err, ErrorFile)
+	}
+	err = os.Remove(file.Name())
+	if err != nil {
+		Err("Error deleting file:", err, ErrorFile)
 	}
 
 	_, err = stuff.queue.DeleteMessage(msg)
