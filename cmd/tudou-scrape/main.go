@@ -236,7 +236,7 @@ func exit(code int) {
 	Yellowln("Removing tempfiles...")
 	for _, f := range stuff.tempFiles {
 		err := os.Remove(f)
-		if err != nil {
+		if err != nil && !os.IsNotExist(err) {
 			Redln("Error deleting file "+f+":", err, ErrorFile)
 		}
 	}

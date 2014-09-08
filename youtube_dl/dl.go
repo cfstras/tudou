@@ -125,7 +125,7 @@ func Load(url string) (file *os.File, length int64, info Info, infoBytes []byte,
 func deleteTemps(files *[]string) {
 	for _, f := range *files {
 		err := os.Remove(f)
-		if err != nil {
+		if err != nil && !os.IsNotExist(err) {
 			fmt.Println("Error deleting file "+f+":", err)
 		}
 	}
