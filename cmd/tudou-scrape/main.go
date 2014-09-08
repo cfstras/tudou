@@ -38,6 +38,8 @@ var stuff struct {
 
 	items data.ItemSlice
 	queue *sqs.Queue
+
+	tempFiles []string
 }
 
 func Color(color ct.Color, msg ...interface{}) {
@@ -103,6 +105,8 @@ func main() {
 		os.Exit(ErrorArgs)
 	}
 
+	defer exit(0)
+
 	var err error
 	stuff.auth, err = aws.EnvAuth()
 	if err != nil {
@@ -138,7 +142,7 @@ func main() {
 			err = stuff.items.LoadTSV(tsvSource)
 		}
 		if err != nil {
-			Err("Error loading JSON/CSV:", err, ErrorSource)
+			die("Error loading JSON/CSV:", err, ErrorSource)
 		}
 		send()
 	}
@@ -155,21 +159,21 @@ func receive() {
 
 	msgs, err := stuff.queue.ReceiveMessage(1)
 	if err != nil {
-		Err("Error in ReceiveMessage:", err, ErrorQueue)
+		die("Error in ReceiveMessage:", err, ErrorQueue)
 	}
 	if len(msgs.Messages) < 1 {
-		Err("No message received", nil, ErrorQueue)
+		die("No message received", nil, ErrorQueue)
 	}
 	msg := &msgs.Messages[0]
 	split := strings.Split(msg.Body, "\t")
 	if len(split) != 2 {
-		Err("Invalid Message in queue: "+msg.Body, nil, ErrorQueue)
+		die("Invalid Message in queue: "+msg.Body, nil, ErrorQueue)
 	}
 	videoId := split[0] //, split[1]
 
 	// check if file exists already
 	if res, err := bucket.List(videoId, "", "", 20); err != nil {
-		Err("Error checking S3 for video:", err, ErrorS3)
+		die("Error checking S3 for video:", err, ErrorS3)
 	} else if len(res.Contents) > 0 {
 		gotOne, gotSize, gotKey := false, int64(0), ""
 		for _, k := range res.Contents {
@@ -181,9 +185,9 @@ func receive() {
 		if gotOne {
 			_, err = stuff.queue.DeleteMessage(msg)
 			if err != nil {
-				Err("Error in DeleteMessage:", err, ErrorQueue)
+				die("Error in DeleteMessage:", err, ErrorQueue)
 			}
-			Err(fmt.Sprint("File already there, size ", gotSize, ", key ",
+			die(fmt.Sprint("File already there, size ", gotSize, ", key ",
 				gotKey), nil, ErrorExists)
 		}
 	}
@@ -192,13 +196,16 @@ func receive() {
 	Yellow("Loading ")
 	fmt.Println(url)
 	file, length, info, infoBytes, err := dl.Load(url)
+	if file != nil {
+		stuff.tempFiles = append(stuff.tempFiles, file.Name())
+	}
 	if err != nil {
-		Err("Error loading video:", err, ErrorDownload)
+		die("Error loading video:", err, ErrorDownload)
 	}
 	path := videoId + "."
 
 	if length == 0 || len(infoBytes) == 0 {
-		Err(fmt.Sprint("Error: got invalid lengths. Video size: ", length,
+		die(fmt.Sprint("Error: got invalid lengths. Video size: ", length,
 			", Info size: ", len(infoBytes), "; info: ", string(infoBytes)),
 			nil, ErrorDownload)
 	}
@@ -207,27 +214,22 @@ func receive() {
 	fmt.Println(path + "json")
 	err = bucket.Put(path+"json", infoBytes, "application/json", s3.AuthenticatedRead, s3.Options{})
 	if err != nil {
-		Err("Error putting metadata:", err, ErrorQueue)
+		die("Error putting metadata:", err, ErrorQueue)
 	}
 
 	Yellowln("Saving video ...")
 	err = bucket.PutReader(path+info.Extension, file, length, "video/x-flv", s3.AuthenticatedRead, s3.Options{})
 	if err != nil {
-		Err("Error PUTting video:", err, ErrorS3)
-	}
-	Yellowln("Removing tempfiles...")
-	err = file.Close()
-	if err != nil {
-		Err("Error closing file:", err, ErrorFile)
-	}
-	err = os.Remove(file.Name())
-	if err != nil {
-		Err("Error deleting file:", err, ErrorFile)
+		die("Error PUTting video:", err, ErrorS3)
 	}
 
 	_, err = stuff.queue.DeleteMessage(msg)
 	if err != nil {
-		Err("Error in DeleteMessage:", err, ErrorQueue)
+		die("Error in DeleteMessage:", err, ErrorQueue)
+	}
+	err = file.Close()
+	if err != nil {
+		die("Error closing file:", err, ErrorFile)
 	}
 }
 
@@ -244,9 +246,22 @@ func send() {
 	}
 }
 
-func Err(msg string, err error, exitCode int) {
+func die(msg string, err error, exitCode int) {
 	Redln(msg, err)
-	os.Exit(exitCode)
+
+	exit(exitCode)
+}
+
+func exit(code int) {
+	Yellowln("Removing tempfiles...")
+	for _, f := range stuff.tempFiles {
+		err := os.Remove(f)
+		if err != nil {
+			Redln("Error deleting file "+f+":", err, ErrorFile)
+		}
+	}
+
+	os.Exit(code)
 }
 
 func getRegion(name string) (r aws.Region) {

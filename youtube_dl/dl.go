@@ -31,7 +31,14 @@ const TudouUrl = "http://tudou.com/programs/view/"
 
 func Load(url string) (file *os.File, length int64, info Info, infoBytes []byte,
 	err error) {
+
 	file, err = ioutil.TempFile(".", "tudou-scraper-ytdl-")
+	var tempFiles []string
+	defer deleteTemps(&tempFiles)
+	if file != nil {
+		tempFiles = append(tempFiles, file.Name())
+	}
+
 	if err != nil {
 		return
 	}
@@ -73,11 +80,14 @@ func Load(url string) (file *os.File, length int64, info Info, infoBytes []byte,
 	go pipe(stdout)
 	go pipe(stderr)
 
+	infoFilename := file.Name() + ".info.json"
+	tempFiles = append(tempFiles, infoFilename)
+	tempFiles = append(tempFiles, file.Name()+".part")
+
 	err = cmd.Start()
 	if err != nil {
 		return
 	}
-	infoFilename := file.Name() + ".info.json"
 
 	err = cmd.Wait()
 	if err != nil {
@@ -110,4 +120,13 @@ func Load(url string) (file *os.File, length int64, info Info, infoBytes []byte,
 	}
 	_, err = file.Seek(0, 0) // seek to start
 	return
+}
+
+func deleteTemps(files *[]string) {
+	for _, f := range *files {
+		err := os.Remove(f)
+		if err != nil {
+			fmt.Println("Error deleting file "+f+":", err)
+		}
+	}
 }
