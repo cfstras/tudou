@@ -1,6 +1,7 @@
 package main
 
 import (
+	. "bitbucket.org/cfstras/tudou/color"
 	"bitbucket.org/cfstras/tudou/data"
 	dl "bitbucket.org/cfstras/tudou/youtube_dl"
 	"flag"
@@ -12,7 +13,6 @@ import (
 	"github.com/crowdmob/goamz/aws"
 	"github.com/crowdmob/goamz/s3"
 	"github.com/crowdmob/goamz/sqs"
-	ct "github.com/daviddengcn/go-colortext"
 )
 
 const (
@@ -40,26 +40,6 @@ var stuff struct {
 	queue *sqs.Queue
 
 	tempFiles []string
-}
-
-func Color(color ct.Color, msg ...interface{}) {
-	ct.ChangeColor(color, false, ct.None, false)
-	fmt.Print(msg...)
-	ct.ResetColor()
-}
-func Colorln(color ct.Color, msg ...interface{}) {
-	ct.ChangeColor(color, false, ct.None, false)
-	fmt.Println(msg...)
-	ct.ResetColor()
-}
-func Redln(msg ...interface{}) {
-	Colorln(ct.Red, msg...)
-}
-func Yellow(msg ...interface{}) {
-	Color(ct.Yellow, msg...)
-}
-func Yellowln(msg ...interface{}) {
-	Colorln(ct.Yellow, msg...)
 }
 
 func main() {
