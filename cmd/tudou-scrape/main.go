@@ -165,7 +165,7 @@ func receive() {
 	if len(split) != 2 {
 		Err("Invalid Message in queue: "+msg.Body, nil, ErrorQueue)
 	}
-	videoId, videoTitle := split[0], split[1]
+	videoId := split[0] //, split[1]
 
 	// check if file exists already
 	if res, err := bucket.List(videoId, "", "", 20); err != nil {
@@ -195,7 +195,7 @@ func receive() {
 	if err != nil {
 		Err("Error loading video:", err, ErrorDownload)
 	}
-	path := videoId + " " + videoTitle + "."
+	path := videoId + "."
 
 	if length == 0 || len(infoBytes) == 0 {
 		Err(fmt.Sprint("Error: got invalid lengths. Video size: ", length,
