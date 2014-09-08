@@ -76,11 +76,7 @@ func main() {
 
 		for _, f := range res.Contents {
 			parts := split.Split(f.Key, -1)
-			if len(parts) > 0 {
-				marker = parts[0]
-			} else {
-				marker = f.Key
-			}
+			marker = f.Key
 			if len(parts) > 2 {
 				n := parts[0] + "." + parts[len(parts)-1]
 				Yellow("Rename ")
