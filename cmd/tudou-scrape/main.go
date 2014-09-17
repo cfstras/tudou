@@ -28,6 +28,7 @@ const (
 	ErrorDownload
 	ErrorExists
 	ErrorFile
+	ErrorEmpty = 99
 )
 
 var stuff struct {
@@ -144,7 +145,7 @@ func receive() {
 		die("Error in ReceiveMessage:", err, ErrorQueue)
 	}
 	if len(msgs.Messages) < 1 {
-		die("No message received", nil, ErrorQueue)
+		die("No message received", nil, ErrorEmpty)
 	}
 	msg := &msgs.Messages[0]
 	del := false
