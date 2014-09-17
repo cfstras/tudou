@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"os/user"
+	"strconv"
 	"strings"
 
 	"github.com/crowdmob/goamz/aws"
@@ -137,7 +138,8 @@ func receive() {
 	s3client := s3.New(stuff.auth, stuff.bucketRegion)
 	/* I haz a */ bucket := s3client.Bucket(stuff.bucketName)
 
-	msgs, err := stuff.queue.ReceiveMessage(1)
+	msgs, err := stuff.queue.ReceiveMessageWithParameters(map[string]string{
+		"AttributeName": "ApproximateReceiveCount"})
 	if err != nil {
 		die("Error in ReceiveMessage:", err, ErrorQueue)
 	}
@@ -145,6 +147,18 @@ func receive() {
 		die("No message received", nil, ErrorQueue)
 	}
 	msg := &msgs.Messages[0]
+	del := false
+	for _, a := range msg.Attribute {
+		if a.Name == "ApproximateReceiveCount" {
+			i, _ := strconv.Atoi(a.Value)
+			if i > 5 {
+				del = true
+				Redln("File was already tried", i, "times")
+				break
+			}
+		}
+	}
+
 	split := strings.Split(msg.Body, "\t")
 	if len(split) != 2 {
 		die("Invalid Message in queue: "+msg.Body, nil, ErrorQueue)
@@ -163,13 +177,18 @@ func receive() {
 			}
 		}
 		if gotOne {
-			_, err = stuff.queue.DeleteMessage(msg)
-			if err != nil {
-				die("Error in DeleteMessage:", err, ErrorQueue)
-			}
-			die(fmt.Sprint("File already there, size ", gotSize, ", key ",
-				gotKey), nil, ErrorExists)
+			del = true
+			Redln("File already there, size ", gotSize, ", key ",
+				gotKey)
 		}
+	}
+
+	if del {
+		_, err = stuff.queue.DeleteMessage(msg)
+		if err != nil {
+			die("Error in DeleteMessage:", err, ErrorQueue)
+		}
+		die("Exiting", nil, ErrorExists)
 	}
 
 	url := dl.TudouUrl + videoId
