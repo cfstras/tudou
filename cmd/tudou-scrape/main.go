@@ -154,7 +154,7 @@ func receive() {
 			i, _ := strconv.Atoi(a.Value)
 			if i > 5 {
 				del = true
-				Redln("File was already tried", i, "times")
+				Redln("File", msg.Body, "was already tried", i, "times")
 				break
 			}
 		}
