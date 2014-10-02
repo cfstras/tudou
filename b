@@ -2,7 +2,7 @@
 
 BASEPATH=bitbucket.org/cfstras/tudou
 
-FOLDERS=$(find * -type d)
+FOLDERS=$(find . -type d | cut -c3-)
 CMDS=$(ls cmd)
 
 function build() {

@@ -2,10 +2,12 @@ package main
 
 import (
 	"bitbucket.org/cfstras/tudou/data"
+	dl "bitbucket.org/cfstras/tudou/youtube_dl"
 	"flag"
 	"fmt"
 	"os"
 	"os/user"
+	"strings"
 
 	"github.com/crowdmob/goamz/aws"
 	"github.com/crowdmob/goamz/s3"
@@ -20,8 +22,9 @@ const (
 	ErrorSource
 	ErrorNotImpl
 	ErrorGetQueue
-	ErrorSendMessage
+	ErrorQueue
 	ErrorS3
+	ErrorDownload
 )
 
 var stuff struct {
@@ -41,21 +44,18 @@ func Color(color ct.Color, msg ...interface{}) {
 	ct.ResetColor()
 }
 func Colorln(color ct.Color, msg ...interface{}) {
-	msg2 := make([]interface{}, 0, len(msg)*2-1)
-	for i, s := range msg {
-		if i != 0 {
-			msg2 = append(msg2, " ")
-		}
-		msg2 = append(msg2, s)
-	}
-	Color(color, msg2...)
-	fmt.Println()
+	ct.ChangeColor(color, false, ct.None, false)
+	fmt.Println(msg...)
+	ct.ResetColor()
 }
 func Redln(msg ...interface{}) {
 	Colorln(ct.Red, msg...)
 }
 func Yellow(msg ...interface{}) {
 	Color(ct.Yellow, msg...)
+}
+func Yellowln(msg ...interface{}) {
+	Colorln(ct.Yellow, msg...)
 }
 
 func main() {
@@ -144,8 +144,7 @@ func main() {
 			err = stuff.items.LoadTSV(tsvSource)
 		}
 		if err != nil {
-			Redln("Loading JSON/CSV:", err)
-			os.Exit(ErrorSource)
+			Err("Error loading JSON/CSV:", err, ErrorSource)
 		}
 		send()
 	}
@@ -158,16 +157,64 @@ func main() {
 func receive() {
 	s3client := s3.New(stuff.auth, stuff.region)
 	/* I haz a */ bucket := s3client.Bucket(stuff.bucketName)
-	res, err := bucket.List("", "", "", 100)
-	if err != nil {
-		Redln("S3 list:", err)
-		os.Exit(ErrorS3)
-	}
-	Redln("res:", res.Contents)
 
-	//TODO
-	Redln("Error: not implemented")
-	os.Exit(ErrorNotImpl)
+	msgs, err := stuff.queue.ReceiveMessage(1)
+	if err != nil {
+		Err("Error in ReceiveMessage:", err, ErrorQueue)
+	}
+	if len(msgs.Messages) < 1 {
+		Err("No message received", nil, ErrorQueue)
+	}
+	msg := &msgs.Messages[0]
+	split := strings.Split(msg.Body, "\t")
+	if len(split) != 2 {
+		Err("Invalid Message in queue: "+msg.Body, nil, ErrorQueue)
+	}
+	videoId, videoTitle := split[0], split[1]
+
+	//TODO check if file exists already
+
+	url := dl.TudouUrl + videoId
+	Yellow("Loading ")
+	fmt.Println(url)
+	file, length, info, infoBytes, err := dl.Load(url)
+	if err != nil {
+		Err("Error loading video:", err, ErrorDownload)
+	}
+	path := videoId + " " + videoTitle + "."
+
+	if length == 0 || len(infoBytes) == 0 {
+		Err(fmt.Sprint("Error: got invalid lengths. Video size: ", length,
+			", Info size: ", len(infoBytes), "; info: ", string(infoBytes)),
+			nil, ErrorDownload)
+	}
+
+	Yellow("Saving metadata ")
+	fmt.Println(path + "json")
+	err = bucket.Put(path+"json", infoBytes, "application/json", s3.AuthenticatedRead, s3.Options{})
+	if err != nil {
+		Err("Error putting metadata:", err, ErrorQueue)
+	}
+
+	Yellowln("Saving video ...")
+	err = bucket.PutReader(path+info.Extension, file, length, "video/x-flv", s3.AuthenticatedRead, s3.Options{})
+	if err != nil {
+		Err("Error PUTting video:", err, ErrorS3)
+	}
+	Yellowln("Removing tempfiles...")
+	err = os.Remove(file.Name())
+	if err != nil {
+		Err("Error deleting file:", err, ErrorS3)
+	}
+	err = file.Close()
+	if err != nil {
+		Err("Error closing file:", err, ErrorS3)
+	}
+
+	_, err = stuff.queue.DeleteMessage(msg)
+	if err != nil {
+		Err("Error in DeleteMessage:", err, ErrorQueue)
+	}
 }
 
 func send() {
@@ -176,9 +223,14 @@ func send() {
 		resp, err := stuff.queue.SendMessage(msg)
 		if err != nil {
 			Redln("SendMessage:", err)
-			os.Exit(ErrorSendMessage)
+			os.Exit(ErrorQueue)
 		}
-		Yellow("Sent", msg)
-		fmt.Println("id:", resp.Id, "md5:", resp.MD5)
+		Yellow("Sent ", msg)
+		fmt.Println(" id:", resp.Id, "md5:", resp.MD5)
 	}
+}
+
+func Err(msg string, err error, exitCode int) {
+	Redln(msg, err)
+	os.Exit(exitCode)
 }

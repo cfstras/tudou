@@ -37,6 +37,12 @@ Sends Video IDs to SQS.
 
     tudou-scrape -send -json bla.json -queue huxlipux -region us-east-1
 
+Receives Video IDs from SQS, loads videos and uploads to S3.
+
+    tudou-scrape -receive -queue huxlipux -region us-east-1 -bucket huxlipux
+
+**TODO**: The scraper does not yet check whether the files already exist, so be careful putting duplicates into the queue.
+
 ## libs
 
 ### data
