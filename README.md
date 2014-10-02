@@ -1,19 +1,40 @@
-# Tools for Tudou Scraping
+# tools
+
+This repository contains some small library and commandline tools to effectively
+crawl a lot of videos from Tudou, a chinese YouTube clone.
+
+The setup is as follows:
+
+- Create a queue on Amazon Simple Queue Service
+- Create an Amazon S3 Bucket for your videos
+- Load metadata with `tudou-load`
+- Fill metadata into SQS with `tudou-scrape -send`
+- Start a bunch of EC2 machines running `tudou-scrape -receive`
+
+There you go, have fun crawling massive amounts of videos on the cheap!
+
+Changing this to support other sites should be easy, and if you do so, I would be
+very happy about a pull request.
+
+A quick note:
+This is intended only to download and use videos in a legal fashion. If anything
+you do with this toolset is forbidden in your country, I urge you **a)** not to
+do it and **b)** to leave me out of it.
 
 ## install
 
+Install [Go](http://golang.org):
+
     sudo apt-get install golang
 
-To install go (at least on Debian-ish systems)
+Install all commands:
 
-    go get bitbucket.org/cfstras/tudou/cmd/...
-
-Will install all commands.
+    go get github.com/cfstras/tudou/cmd/...
 
 ## dev setup
 
-    go get -d bitbucket.org/cfstras/tudou/
-    cd $(go env GOPATH)/src/bitbucket.org/cfstras/tudou/
+    go get -d github.com/cfstras/tudou/
+    cd $(go env GOPATH)/src/github.com/cfstras/tudou/
     ./b
 
 Will download your repo and build all the packages in `cmd/` to `bin/`.
@@ -56,7 +77,7 @@ Wrapper around youtube-dl
 
 ### color
 
-Little wrappers around github.com/daviddengcn/go-colortext for easy logging.
+Little wrappers around [daviddengcn/go-colortext](http://github.com/daviddengcn/go-colortext) for easy logging.
 
 # license
 
