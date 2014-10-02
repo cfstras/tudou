@@ -18,7 +18,6 @@ Will install all commands.
 
 Will download your repo and build all the packages in `cmd/` to `bin/`.
 
-
 ## commands
 
 ### tudou-load
@@ -37,14 +36,28 @@ Sends Video IDs to SQS.
 
     tudou-scrape -send -json bla.json -queue huxlipux -region us-east-1
 
-Receives Video IDs from SQS, loads videos and uploads to S3.
+Receives Video IDs from SQS, loads videos (if the file is not already on S3) and uploads to S3.
 
     tudou-scrape -receive -queue huxlipux -region us-east-1 -bucket huxlipux
 
-**TODO**: The scraper does not yet check whether the files already exist, so be careful putting duplicates into the queue.
+### tudou-rename
+
+Renames Videos in the form `<Tudou-ID> *.*` to `<Tudou-ID>.*`, for the older version of the scraper which saved to `<id> <title>.json`.
 
 ## libs
 
 ### data
 
-Loader for Tudou Lists and users
+Loading library for Tudou list and user metadata, and loading from and to JSON and TSV
+
+### dl
+
+Wrapper around youtube-dl
+
+### color
+
+Little wrappers around github.com/daviddengcn/go-colortext for easy logging.
+
+# license
+
+Beerware. Patches welcome.
