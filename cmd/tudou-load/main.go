@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"bitbucket.org/cfstras/tudou/data"
+	"github.com/cfstras/tudou/data"
 )
 
 const (

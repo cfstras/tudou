@@ -1,12 +1,12 @@
 package main
 
 import (
-	. "bitbucket.org/cfstras/tudou/color"
 	"flag"
 	"fmt"
 	"os"
 	"os/user"
 	"regexp"
+	. "github.com/cfstras/tudou/color"
 
 	"github.com/crowdmob/goamz/aws"
 	"github.com/crowdmob/goamz/s3"

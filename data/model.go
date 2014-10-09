@@ -29,7 +29,7 @@ type Item struct {
 	ItemID    int64         `json:"itemID"`
 	PicUrl    string        `json:"picurl"`
 	PlayNum   int64         `json:"playNum"`
-	pubDate   time.Time     `json:"pubDate"`
+	PubDate   time.Time     `json:"pubDate"`
 	Title     string        `json:"title"`
 	TotalTime time.Duration `json:"totalTime"`
 }

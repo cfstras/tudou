@@ -1,15 +1,15 @@
 package main
 
 import (
-	. "bitbucket.org/cfstras/tudou/color"
-	"bitbucket.org/cfstras/tudou/data"
-	dl "bitbucket.org/cfstras/tudou/youtube_dl"
 	"flag"
 	"fmt"
 	"os"
 	"os/user"
 	"strconv"
 	"strings"
+	. "github.com/cfstras/tudou/color"
+	"github.com/cfstras/tudou/data"
+	dl "github.com/cfstras/tudou/youtube_dl"
 
 	"github.com/crowdmob/goamz/aws"
 	"github.com/crowdmob/goamz/s3"
