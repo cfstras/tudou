@@ -1,4 +1,4 @@
-# tools
+# tools [![Build Status](https://travis-ci.org/cfstras/tudou.svg?branch=master)](https://travis-ci.org/cfstras/tudou)
 
 This repository contains some small library and commandline tools to effectively
 crawl a lot of videos from Tudou, a chinese YouTube clone.
